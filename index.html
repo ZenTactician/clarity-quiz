@@ -392,6 +392,17 @@
   }
 
   function renderResult() {
+    // Silently send the answers to Formspree
+    fetch(FORMSPREE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        state: answers.state,
+        domain: answers.domain,
+        need: answers.need
+      })
+    }).catch(() => {}); // fail silently — never blocks the user's experience
+
     cardEl.innerHTML = '';
     cardEl.classList.add('result');
 
