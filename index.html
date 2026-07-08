@@ -320,8 +320,9 @@
   const BOOKING_URL = "https://outlook.office365.com/owa/calendar/ZenTacticians2@zentacticians.com/bookings/";
   const FORMSPREE_URL = "https://formspree.io/f/mlgykqay";
 
-  let step = 0; // 0,1,2 = questions; 3 = result
+  let step = 0; // 0,1,2 = questions; 3 = contact capture; 4 = result
   const answers = {};
+  const contact = { name: '', email: '' };
 
   const pathEl = document.getElementById('path');
   const cardEl = document.getElementById('card');
@@ -391,12 +392,77 @@
     cardEl.appendChild(backRow);
   }
 
+  function renderCapture() {
+    cardEl.innerHTML = '';
+    cardEl.classList.remove('result');
+
+    const stepLabel = document.createElement('p');
+    stepLabel.className = 'step-label';
+    stepLabel.textContent = 'Almost there';
+    cardEl.appendChild(stepLabel);
+
+    const h1 = document.createElement('h1');
+    h1.className = 'question';
+    h1.textContent = "Where should we send your next step?";
+    cardEl.appendChild(h1);
+
+    const sub = document.createElement('p');
+    sub.className = 'sub';
+    sub.textContent = "Just so we know who's saying hello.";
+    cardEl.appendChild(sub);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'field';
+    nameInput.placeholder = 'First name';
+    nameInput.value = contact.name;
+    cardEl.appendChild(nameInput);
+
+    const emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.className = 'field';
+    emailInput.placeholder = 'Email address';
+    emailInput.value = contact.email;
+    cardEl.appendChild(emailInput);
+
+    const error = document.createElement('p');
+    error.className = 'field-error';
+    cardEl.appendChild(error);
+
+    const continueBtn = document.createElement('button');
+    continueBtn.className = 'cta';
+    continueBtn.textContent = 'See my next step ➔';
+    continueBtn.addEventListener('click', () => {
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim());
+      if (!nameInput.value.trim() || !emailOk) {
+        error.textContent = 'Please enter your name and a valid email.';
+        return;
+      }
+      contact.name = nameInput.value.trim();
+      contact.email = emailInput.value.trim();
+      step++;
+      render();
+    });
+    cardEl.appendChild(continueBtn);
+
+    const backRow = document.createElement('div');
+    backRow.className = 'back-row';
+    const back = document.createElement('button');
+    back.className = 'back-link';
+    back.textContent = '← Back';
+    back.addEventListener('click', () => { step--; render(); });
+    backRow.appendChild(back);
+    cardEl.appendChild(backRow);
+  }
+
   function renderResult() {
-    // Silently send the answers to Formspree
+    // Silently send the answers + contact info to Formspree
     fetch(FORMSPREE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
+        name: contact.name,
+        email: contact.email,
         state: answers.state,
         domain: answers.domain,
         need: answers.need
@@ -426,7 +492,9 @@
 
     const h1 = document.createElement('h1');
     h1.className = 'question';
-    h1.textContent = `On ${domainLabels[answers.domain]}`;
+    h1.textContent = contact.name
+      ? `${contact.name}, on ${domainLabels[answers.domain]}`
+      : `On ${domainLabels[answers.domain]}`;
     cardEl.appendChild(h1);
 
     const body = document.createElement('div');
@@ -452,6 +520,8 @@
     restart.addEventListener('click', () => {
       step = 0;
       answers.state = answers.domain = answers.need = undefined;
+      contact.name = '';
+      contact.email = '';
       cardEl.classList.remove('result');
       render();
     });
@@ -463,6 +533,8 @@
     if (step < questions.length) {
       cardEl.classList.remove('result');
       renderQuestion();
+    } else if (step === questions.length) {
+      renderCapture();
     } else {
       renderResult();
     }
